@@ -6,11 +6,6 @@
 typedef unsigned long long int bits;
 
 
-
-//FAZER ESSAS DUAS TABELAS DE UM JEITO CERTO
-
-
-
 int ip[] = {58, 50, 42, 34, 26, 18, 10, 2, 
             60, 52, 44, 36, 28, 20, 12, 4, 
             62, 54, 46, 38, 30, 22, 14, 6,
@@ -49,6 +44,16 @@ int pc2table[] = { 14, 17, 11, 24,  1,  5,  3, 28,
                    51, 45, 33, 48, 44, 49, 39, 56,
                    34, 53, 46, 42, 50, 36, 29, 32};
 
+int ipinverso[] = { 40,  8, 48, 16, 56, 24, 64, 32,
+                    39,  7, 47, 15, 55, 23, 63, 31,
+                    38,  6, 46, 14, 54, 22, 62, 30,
+                    37,  5, 45, 13, 53, 21, 61, 29,
+                    36,  4, 44, 12, 52, 20, 60, 28,
+                    35,  3, 43, 11, 51, 19, 59, 27,
+                    34,  2, 42, 10, 50, 18, 58, 26,
+                    33,  1, 41,  9, 49, 17, 57, 25};
+
+
 
 bits permutacao(bits tabelaInicial, int ordem[], int tamI, int tamordem){
 
@@ -78,6 +83,7 @@ bits rounds(bits entrada, bits chave, int nround){
     temp =l  << 32;
     r =entrada  ^ temp;    
 
+    //DEBUG
     //printf("l = %llu \n r = %llu \n entrada = %llu", l,r,entrada);
 
     //Expansion permutation
@@ -133,17 +139,28 @@ bits rounds(bits entrada, bits chave, int nround){
     unsigned int linha[8], mlinha = 33; // 0010 0001
     unsigned int coluna[8], mcoluna = 30; // 0001 1110
     unsigned int aux = 0;
+
+    //DEBUG
     //printf("Saida : %llx \n", saida);
+    
+    //Pega a linha e a coluna a ser utilizada de cada S-Box
     for(int i = 0; i < 8; i++){
-        temp = (saida >> (6 * (8-i-1))) & mascara; // eu acho que aqui no caso será pq o ultimo bit teria de ser 47, já que a gente começa em 0 temp = (saida >> (6 * (8-i-1))) & mascara;
+        temp = (saida >> (6 * (8-i-1))) & mascara; 
+        
+        //DEBUG
         //printf("temp > %llu \n", temp);
+
         linha[i] = temp & mlinha;
         aux = linha[i] >> 5 ;
         linha[i] = (linha[i] |(aux << 1)) & 3;
         coluna[i] = temp & mcoluna;
         coluna[i] = coluna[i] >> 1;
+        
+        //DEBUG
         //printf("linha : %d \n coluna : %d \n", linha[i],coluna[i]);
     }
+
+    //Pega o valor das S-Box
     temp = 0;
     temp = s1[linha[0] * 16 + coluna[0]] << 4;
     temp = (temp | s2[linha[1] * 16 + coluna[1]]) << 4;
@@ -155,6 +172,8 @@ bits rounds(bits entrada, bits chave, int nround){
     temp = (temp | s8[linha[7] * 16 + coluna[7]]);
 
     saida = temp;
+
+    //DEBUG
     //printf("saida2.0 : %llx", saida);
 
     //Permutação(P)
@@ -164,14 +183,13 @@ bits rounds(bits entrada, bits chave, int nround){
     saida = saida ^ l;
 
     r = r << 32;
-
-
     return(saida | r);
 }
 bits lshiftkey(bits cd,int round){ // aqui? sim
 
     bits c,d, mascara, temp;
 
+    //Separa a entrada em dois
     c = cd >> (28);
     mascara = c << 28;
     d = cd ^ mascara;
@@ -218,17 +236,37 @@ int des(bits textoClaro, bits palavraChave) {
     
     int i = 0;
     
+    //Permutação Inicial
     bits lr = permutacao(textoClaro, ip, 64, TAM_TABELA(ip));
+    
+    //PC-1
     bits cd = permutacao(palavraChave, pc1table, 64, TAM_TABELA(pc1table));
 
 
     printf("IP : %llX \n", lr);
     printf("CHAVE : %llX \n", cd);
+    
+    //ROUND
     for( i = 0; i < 16; i++){ 
         cd = lshiftkey(cd, i);
         lr =  rounds(lr, cd, i);
         printf("ROUND %d : \n %llX \n", i, lr );
     }    
+
+    //SWAP
+    bits temp = 0;
+
+    temp = lr >> 32;
+    lr = lr & (4294967295);
+    lr = (lr << 32) | temp;
+
+    printf("SWAP : \n %llX \n", lr);
+
+    //Permutação final
+    lr = permutacao(lr, ipinverso, 64, TAM_TABELA(ipinverso)); 
+
+    printf("IP Inverso : \n %llX \n", lr);
+
     return(0);
 }
 int main() {
@@ -253,6 +291,7 @@ int main() {
 
     printf("Entrada : %llu\n", textoClaro);
     printf("Chave : %llx\n", palavraChave);
+
     des(textoClaro,palavraChave);
 
     return(0);
