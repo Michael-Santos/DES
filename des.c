@@ -6,7 +6,11 @@
 typedef unsigned long long int bits;
 
 
+
 //FAZER ESSAS DUAS TABELAS DE UM JEITO CERTO
+
+
+
 int ip[] = {58, 50, 42, 34, 26, 18, 10, 2, 
             60, 52, 44, 36, 28, 20, 12, 4, 
             62, 54, 46, 38, 30, 22, 14, 6,
@@ -17,6 +21,7 @@ int ip[] = {58, 50, 42, 34, 26, 18, 10, 2,
             63, 55, 47, 39, 31, 23, 15, 7,};
 int etable[] = { 32, 1, 2, 3, 4, 5,
                    4, 5, 6, 7, 8, 9,
+                   8, 9,10,11,12,13,
                   12,13,14,15,16,17,
                   16,17,18,19,20,21,
                   20,21,22,23,24,25,
@@ -45,18 +50,18 @@ int pc2table[] = { 14, 17, 11, 24,  1,  5,  3, 28,
                    34, 53, 46, 42, 50, 36, 29, 32};
 
 
-bits permutacao(bits tabelaInicial, int ordem[], int tam){
+bits permutacao(bits tabelaInicial, int ordem[], int tamI, int tamordem){
 
     int i = 0;
     bits mascara = 0, tabelaFinal = 0;
 
     //Insere na tabelaFinal os bits 1 na nova posição dada pela vetor ordem[]
-    for(i = 0; i < tam; i++){
+    for(i = 0; i < tamordem; i++){
         //Cria a mascara para pegar o valor do bit na posição da tabela original;
-        mascara = (bits) 1 << (tam - ordem[i]);
+        mascara = (bits) 1 << (tamI - ordem[i]);
         //Caso o bit for 1, é adicionado a tabelaFinal o bit 1 na posição i.
         if ( (mascara & tabelaInicial) != 0){
-            tabelaFinal = tabelaFinal | ((bits)1 << (tam - i - 1));
+            tabelaFinal = tabelaFinal | ((bits)1 << (tamordem - i - 1));
         }
         mascara = 0;
     }
@@ -66,11 +71,104 @@ bits permutacao(bits tabelaInicial, int ordem[], int tam){
 
 bits rounds(bits entrada, bits chave, int nround){
 
+    bits l,r, temp, saida, temp2;
+    
+    //Separa a entrada em L e R, cada uma com 32 bits
+    l = entrada >> (32);
+    temp =l  << 32;
+    r =entrada  ^ temp;    
+
+    //printf("l = %llu \n r = %llu \n entrada = %llu", l,r,entrada);
+
+    //Expansion permutation
+    saida = permutacao(r,etable,32,TAM_TABELA(etable));
+
+    //XOR + Permuted Choice 2
+    saida = saida ^ permutacao(chave,pc2table,56,TAM_TABELA(pc2table));
+    printf("CHAVE ROUND %d : \n %llX \n", nround, permutacao(chave,pc2table,56,TAM_TABELA(pc2table)) );
 
 
-    return(0);
+    //sbox 
+    int s1[] = { 14,  4, 13,  1,  2, 15, 11,  8,  3, 10,  6, 12,  5,  9,  0,  7,
+                0, 15,  7,  4, 14,  2, 13,  1, 10,  6, 12, 11,  9,  5,  3,  8,
+                4,  1, 14,  8, 13,  6,  2, 11, 15, 12,  9,  7,  3, 10,  5,  0,
+                15, 12, 8,  2,  4,  9,  1,  7,  5, 11,  3, 14, 10,  0,  6, 13};
+
+    int s2[] = { 15,  1,  8, 14,  6, 11,  3,  4,  9,  7,  2, 13, 12,  0,  5, 10,
+                3, 13,  4,  7, 15,  2,  8, 14, 12,  0,  1, 10,  6,  9, 11,  5,
+                0, 14,  7, 11, 10,  4, 13,  1,  5,  8, 12,  6,  9,  3,  2, 15,
+               13,  8, 10,  1,  3, 15,  4,  2, 11,  6,  7, 12,  0,  5, 14,  9};
+
+    int s3[] = { 10,  0,  9, 14,  6,  3, 15,  5,  1, 13, 12,  7, 11,  4,  2,  8,
+               13,  7,  0,  9,  3,  4,  6, 10,  2,  8,  5, 14, 12, 11, 15,  1,
+               13,  6,  4,  9,  8, 15,  3,  0, 11,  1,  2, 12,  5, 10, 14,  7,
+                1, 10, 13,  0,  6,  9,  8,  7,  4, 15, 14,  3, 11,  5,  2, 12};
+
+    int s4[] = {  7, 13, 14,  3,  0,  6,  9, 10,  1,  2,  8,  5, 11, 12,  4, 15,
+               13,  8, 11,  5,  6, 15,  0,  3,  4,  7,  2, 12,  1, 10, 14,  9,
+               10,  6,  9,  0, 12, 11,  7, 13, 15,  1,  3, 14,  5,  2,  8,  4,
+                3, 15,  0,  6, 10,  1, 13,  8,  9,  4,  5, 11, 12,  7,  2, 14};
+
+    int s5[] = {  2, 12,  4,  1,  7, 10, 11,  6,  8,  5,  3, 15, 13,  0, 14,  9,
+               14, 11,  2, 12,  4,  7, 13,  1,  5,  0, 15, 10,  3,  9,  8,  6,
+                4,  2,  1, 11, 10, 13,  7,  8, 15,  9, 12,  5,  6,  3,  0, 14,
+               11,  8, 12,  7,  1, 14,  2, 13,  6, 15,  0,  9, 10,  4,  5,  3};
+
+    int s6[] = { 12,  1, 10, 15,  9,  2,  6,  8,  0, 13,  3,  4, 14,  7,  5, 11,
+               10, 15,  4,  2,  7, 12,  9,  5,  6,  1, 13, 14,  0, 11,  3,  8,
+                9, 14, 15,  5,  2,  8, 12,  3,  7,  0,  4, 10,  1, 13, 11,  6,
+                4,  3,  2, 12,  9,  5, 15, 10, 11, 14,  1,  7,  6,  0,  8, 13};
+
+    int s7[] = {  4, 11,  2, 14, 15,  0,  8, 13,  3, 12,  9,  7,  5, 10,  6,  1,
+               13,  0, 11,  7,  4,  9,  1, 10, 14,  3,  5, 12,  2, 15,  8,  6,
+                1,  4, 11, 13, 12,  3,  7, 14, 10, 15,  6,  8,  0,  5,  9,  2,
+                6, 11, 13,  8,  1,  4, 10,  7,  9,  5,  0, 15, 14,  2,  3, 12};
+
+    int s8[] = { 13,  2,  8,  4,  6, 15, 11,  1, 10,  9,  3, 14,  5,  0, 12,  7,
+                1, 15, 13,  8, 10,  3,  7,  4, 12,  5,  6, 11,  0, 14,  9,  2,
+                7, 11,  4,  1,  9, 12, 14,  2,  0,  6, 10, 13, 15,  3,  5,  8,
+                2,  1, 14,  7,  4, 10,  8, 13, 15, 12,  9,  0,  3,  5,  6, 11};
+
+    unsigned int mascara = 63; // 0011 1111 
+    unsigned int linha[8], mlinha = 33; // 0010 0001
+    unsigned int coluna[8], mcoluna = 30; // 0001 1110
+    unsigned int aux = 0;
+    //printf("Saida : %llx \n", saida);
+    for(int i = 0; i < 8; i++){
+        temp = (saida >> (6 * (8-i-1))) & mascara; // eu acho que aqui no caso será pq o ultimo bit teria de ser 47, já que a gente começa em 0 temp = (saida >> (6 * (8-i-1))) & mascara;
+        //printf("temp > %llu \n", temp);
+        linha[i] = temp & mlinha;
+        aux = linha[i] >> 5 ;
+        linha[i] = (linha[i] |(aux << 1)) & 3;
+        coluna[i] = temp & mcoluna;
+        coluna[i] = coluna[i] >> 1;
+        //printf("linha : %d \n coluna : %d \n", linha[i],coluna[i]);
+    }
+    temp = 0;
+    temp = s1[linha[0] * 16 + coluna[0]] << 4;
+    temp = (temp | s2[linha[1] * 16 + coluna[1]]) << 4;
+    temp = (temp | s3[linha[2] * 16 + coluna[2]]) << 4;
+    temp = (temp | s4[linha[3] * 16 + coluna[3]]) << 4;
+    temp = (temp | s5[linha[4] * 16 + coluna[4]]) << 4;
+    temp = (temp | s6[linha[5] * 16 + coluna[5]]) << 4;
+    temp = (temp | s7[linha[6] * 16 + coluna[6]]) << 4;
+    temp = (temp | s8[linha[7] * 16 + coluna[7]]);
+
+    saida = temp;
+    //printf("saida2.0 : %llx", saida);
+
+    //Permutação(P)
+    saida= permutacao(saida,ptable,32,TAM_TABELA(ptable));
+
+    //XOR 
+    saida = saida ^ l;
+
+    r = r << 32;
+
+
+    return(saida | r);
 }
-bits lshiftkey(bits cd,int round){
+bits lshiftkey(bits cd,int round){ // aqui? sim
 
     bits c,d, mascara, temp;
 
@@ -78,11 +176,16 @@ bits lshiftkey(bits cd,int round){
     mascara = c << 28;
     d = cd ^ mascara;
 
-    mascara = 268435455; // 1111 1111 1111 1111 1111 1111 1111
+    //printf("c = %llu \n d = %llu \n cd = %llu \n", c, d, cd);
+
+    mascara = 268435455; // 0000 1111 1111 1111 1111 1111 1111 1111
 
 
     switch (round){
-        case 0 || 1 || 8 || 15: //lshift 1 bit
+        case 0 :
+        case 1 : 
+        case 8 :  
+        case 15: //lshift 1 bit
             temp  = c >> 27;
             c = (c << 1) | temp;
             c = c & 268435455; 
@@ -103,6 +206,7 @@ bits lshiftkey(bits cd,int round){
 
             break;
     }
+    //printf("sc = %llu \n sd = %llu \n ", c, d);
 
     c = c << 28;
     return c | d;
@@ -112,17 +216,18 @@ bits lshiftkey(bits cd,int round){
 
 int des(bits textoClaro, bits palavraChave) {
     
-    int i;
+    int i = 0;
     
-    bits lr = permutacao(textoClaro, ip, TAM_TABELA(ip));
-    bits cd = permutacao(palavraChave, pc1table, TAM_TABELA(pc1table));
+    bits lr = permutacao(textoClaro, ip, 64, TAM_TABELA(ip));
+    bits cd = permutacao(palavraChave, pc1table, 64, TAM_TABELA(pc1table));
 
 
-    printf("HEX : %llX", lr);
-
-    for( i = 0; i < 16; i++){
+    printf("IP : %llX \n", lr);
+    printf("CHAVE : %llX \n", cd);
+    for( i = 0; i < 16; i++){ 
         cd = lshiftkey(cd, i);
         lr =  rounds(lr, cd, i);
+        printf("ROUND %d : \n %llX \n", i, lr );
     }    
     return(0);
 }
@@ -130,6 +235,7 @@ int main() {
     unsigned char entrada, chave;
     unsigned long long int textoClaro = 0, palavraChave = 0, a;
 
+    printf("Digite o texto claro : ");
     //Recebe o texto claro 
     for(int i=0; i<TAM_ENTRADA; i++) {
         scanf("%hhu", &entrada);
@@ -137,6 +243,7 @@ int main() {
         textoClaro = textoClaro | entrada;
     }
 
+    printf("Digite a chave : ");
     //Recebe a chave
     for(int i=0; i<TAM_ENTRADA; i++) {
         scanf("%hhu", &chave);
@@ -145,6 +252,7 @@ int main() {
     }
 
     printf("Entrada : %llu\n", textoClaro);
+    printf("Chave : %llx\n", palavraChave);
     des(textoClaro,palavraChave);
 
     return(0);
