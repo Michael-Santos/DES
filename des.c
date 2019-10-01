@@ -14,6 +14,7 @@ int ip[] = {58, 50, 42, 34, 26, 18, 10, 2,
             59, 51, 43, 35, 27, 19, 11, 3,
             61, 53, 45, 37, 29, 21, 13, 5,
             63, 55, 47, 39, 31, 23, 15, 7,};
+            
 int etable[] = { 32, 1, 2, 3, 4, 5,
                    4, 5, 6, 7, 8, 9,
                    8, 9,10,11,12,13,
@@ -83,15 +84,12 @@ bits rounds(bits entrada, bits chave, int nround){
     temp =l  << 32;
     r =entrada  ^ temp;    
 
-    //DEBUG
-    //printf("l = %llu \n r = %llu \n entrada = %llu", l,r,entrada);
-
     //Expansion permutation
     saida = permutacao(r,etable,32,TAM_TABELA(etable));
 
     //XOR + Permuted Choice 2
     saida = saida ^ permutacao(chave,pc2table,56,TAM_TABELA(pc2table));
-    printf("CHAVE ROUND %d : \n %llX \n", nround, permutacao(chave,pc2table,56,TAM_TABELA(pc2table)) );
+    printf("CHAVE ROUND %d\n%llX\n\n", nround+1, permutacao(chave,pc2table,56,TAM_TABELA(pc2table)) );
 
 
     //sbox 
@@ -139,25 +137,16 @@ bits rounds(bits entrada, bits chave, int nround){
     unsigned int linha[8], mlinha = 33; // 0010 0001
     unsigned int coluna[8], mcoluna = 30; // 0001 1110
     unsigned int aux = 0;
-
-    //DEBUG
-    //printf("Saida : %llx \n", saida);
     
     //Pega a linha e a coluna a ser utilizada de cada S-Box
     for(int i = 0; i < 8; i++){
         temp = (saida >> (6 * (8-i-1))) & mascara; 
         
-        //DEBUG
-        //printf("temp > %llu \n", temp);
-
         linha[i] = temp & mlinha;
         aux = linha[i] >> 5 ;
         linha[i] = (linha[i] |(aux << 1)) & 3;
         coluna[i] = temp & mcoluna;
         coluna[i] = coluna[i] >> 1;
-        
-        //DEBUG
-        //printf("linha : %d \n coluna : %d \n", linha[i],coluna[i]);
     }
 
     //Pega o valor das S-Box
@@ -173,9 +162,6 @@ bits rounds(bits entrada, bits chave, int nround){
 
     saida = temp;
 
-    //DEBUG
-    //printf("saida2.0 : %llx", saida);
-
     //Permutação(P)
     saida= permutacao(saida,ptable,32,TAM_TABELA(ptable));
 
@@ -185,7 +171,8 @@ bits rounds(bits entrada, bits chave, int nround){
     r = r << 32;
     return(saida | r);
 }
-bits lshiftkey(bits cd,int round){ // aqui? sim
+
+bits lshiftkey(bits cd,int round){
 
     bits c,d, mascara, temp;
 
@@ -193,8 +180,6 @@ bits lshiftkey(bits cd,int round){ // aqui? sim
     c = cd >> (28);
     mascara = c << 28;
     d = cd ^ mascara;
-
-    //printf("c = %llu \n d = %llu \n cd = %llu \n", c, d, cd);
 
     mascara = 268435455; // 0000 1111 1111 1111 1111 1111 1111 1111
 
@@ -224,7 +209,6 @@ bits lshiftkey(bits cd,int round){ // aqui? sim
 
             break;
     }
-    //printf("sc = %llu \n sd = %llu \n ", c, d);
 
     c = c << 28;
     return c | d;
@@ -243,14 +227,14 @@ int des(bits textoClaro, bits palavraChave) {
     bits cd = permutacao(palavraChave, pc1table, 64, TAM_TABELA(pc1table));
 
 
-    printf("IP : %llX \n", lr);
-    printf("CHAVE : %llX \n", cd);
+    printf("IP\n%llX\n\n", lr);
+    printf("CHAVE\n%llX\n\n", palavraChave);
     
     //ROUND
     for( i = 0; i < 16; i++){ 
         cd = lshiftkey(cd, i);
         lr =  rounds(lr, cd, i);
-        printf("ROUND %d : \n %llX \n", i, lr );
+        printf("ROUND %d\n%llX\n\n", i+1, lr );
     }    
 
     //SWAP
@@ -260,44 +244,38 @@ int des(bits textoClaro, bits palavraChave) {
     lr = lr & (4294967295);
     lr = (lr << 32) | temp;
 
-    printf("SWAP : \n %llX \n", lr);
+    printf("SWAP\n%llX\n\n", lr);
 
     //Permutação final
     lr = permutacao(lr, ipinverso, 64, TAM_TABELA(ipinverso)); 
 
-    printf("IP Inverso : \n %llX \n", lr);
+    printf("IP Inverso: %llX\n\n", lr);
 
     return(0);
 }
+
 int main() {
     unsigned char entrada, chave;
     unsigned long long int textoClaro = 0, palavraChave = 0, a;
 
-    printf("Digite o texto claro : ");
     //Recebe o texto claro 
     for(int i=0; i<TAM_ENTRADA; i++) {
-        scanf("%hhu", &entrada);
+        scanf("%hhX", &entrada);
         textoClaro = textoClaro << 8;
         textoClaro = textoClaro | entrada;
     }
 
-    printf("Digite a chave : ");
     //Recebe a chave
     for(int i=0; i<TAM_ENTRADA; i++) {
-        scanf("%hhu", &chave);
+        scanf("%hhX", &chave);
         palavraChave = palavraChave << 8;
         palavraChave = palavraChave | chave;
     }
 
-    printf("Entrada : %llu\n", textoClaro);
-    printf("Chave : %llx\n", palavraChave);
+    printf("PLAIN TEXT\n%llX\n\n", textoClaro);
+    //printf("CHAVE\n%llX\n\n", palavraChave);
 
     des(textoClaro,palavraChave);
 
     return(0);
 }
-
-/*
-Despois de tanta luta por algum motivo não mudei nada e funcionou
-como será que a gente vai receber a chave?
-*/
